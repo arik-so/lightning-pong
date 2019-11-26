@@ -69,10 +69,11 @@ export default class TCP {
 
 			// parse the lightning message
 			const lightningMessage = LightningMessage.parse(decryptedResponse);
-			console.log('Received message of type:', lightningMessage.getTypeName(), `(${lightningMessage.getType()})`);
+			console.log('Decoded Lightning message of type:', lightningMessage.getTypeName(), `(${lightningMessage.getType()})`);
 
 			if (lightningMessage instanceof InitMessage) {
 				const encryptedResponse = this.transmissionHandler.send(decryptedResponse);
+				console.log('Sending init message:', decryptedResponse.toString('hex'));
 				this.socket.write(encryptedResponse);
 			}
 
@@ -81,6 +82,7 @@ export default class TCP {
 				const pongMessage = new PongMessage({
 					ignored: Buffer.alloc(values.num_pong_bytes)
 				});
+				console.log('Sending pong message:', pongMessage.toBuffer().toString('hex'));
 				const encryptedResponse = this.transmissionHandler.send(pongMessage.toBuffer());
 				this.socket.write(encryptedResponse);
 			}

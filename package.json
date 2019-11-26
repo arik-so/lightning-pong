@@ -1,0 +1,35 @@
+{
+	"name": "lightning-pong",
+	"version": "0.1.0",
+	"description": "A barebones node that interacts with the Lightning Network through handshakes and pong messages.",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [
+		"lightning",
+		"network",
+		"pong",
+		"bolt"
+	],
+	"author": {
+		"name": "Arik Sosman",
+		"url": "https://twitter.com/arikaleph"
+	},
+	"license": "MIT",
+	"devDependencies": {
+		"@types/argparse": "^1.0.36",
+		"@types/bigi": "^1.4.2",
+		"@types/debug": "^4.1.5",
+		"@types/ecurve": "^1.0.0",
+		"@types/node": "^12.12.11",
+		"typescript": "^3.7.2"
+	},
+	"dependencies": {
+		"argparse": "^1.0.10",
+		"bigi": "^1.4.2",
+		"bolt02": "^0.1.2",
+		"bolt08": "^0.1.1",
+		"ecurve": "^1.0.6"
+	}
+}

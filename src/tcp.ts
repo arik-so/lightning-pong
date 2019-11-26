@@ -63,7 +63,9 @@ export default class TCP {
 		console.log(inputData.toString('hex'), '\n');
 
 		if (this.transmissionHandler instanceof TransmissionHandler) {
-			const decryptedResponse = this.transmissionHandler.receive(inputData);
+			const decryptionResult = this.transmissionHandler.receive(inputData);
+			this.pendingData = decryptionResult.unreadBuffer;
+			const decryptedResponse = decryptionResult.message;
 			console.log('Decrypted:');
 			console.log(decryptedResponse.toString('hex'), '\n');
 

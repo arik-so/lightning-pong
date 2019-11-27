@@ -7,12 +7,9 @@ import * as net from 'net';
 import {Socket} from 'net';
 import {Role, TransmissionHandler} from 'bolt08';
 import Handshake from 'bolt08/src/handshake';
-import {LightningMessage} from 'bolt02';
-import {InitMessage} from 'bolt02/src/messages/init';
-import {PingMessage} from 'bolt02/src/messages/ping';
-import {PongMessage} from 'bolt02/src/messages/pong';
+import {LightningMessage, Message} from 'bolt02';
 
-const debug = debugModule('bolt08:handshake');
+const debug = debugModule('lightning-pong:tcp');
 const secp256k1 = ecurve.getCurveByName('secp256k1');
 
 export default class TCP {
@@ -63,9 +60,16 @@ export default class TCP {
 		console.log(inputData.toString('hex'), '\n');
 
 		if (this.transmissionHandler instanceof TransmissionHandler) {
+			debug('Decrypting');
 			const decryptionResult = this.transmissionHandler.receive(inputData);
 			this.pendingData = decryptionResult.unreadBuffer;
 			const decryptedResponse = decryptionResult.message;
+
+			if (!decryptedResponse || decryptedResponse.length === 0) {
+				console.log('Too short too decrypt');
+				return;
+			}
+
 			console.log('Decrypted:');
 			console.log(decryptedResponse.toString('hex'), '\n');
 
@@ -73,15 +77,15 @@ export default class TCP {
 			const lightningMessage = LightningMessage.parse(decryptedResponse);
 			console.log('Decoded Lightning message of type:', lightningMessage.getTypeName(), `(${lightningMessage.getType()})`);
 
-			if (lightningMessage instanceof InitMessage) {
+			if (lightningMessage instanceof Message.InitMessage) {
 				const encryptedResponse = this.transmissionHandler.send(decryptedResponse);
 				console.log('Sending init message:', decryptedResponse.toString('hex'));
 				this.socket.write(encryptedResponse);
 			}
 
-			if (lightningMessage instanceof PingMessage) {
+			if (lightningMessage instanceof Message.PingMessage) {
 				const values = lightningMessage['values'];
-				const pongMessage = new PongMessage({
+				const pongMessage = new Message.PongMessage({
 					ignored: Buffer.alloc(values.num_pong_bytes)
 				});
 				console.log('Sending pong message:', pongMessage.toBuffer().toString('hex'));

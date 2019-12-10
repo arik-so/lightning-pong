@@ -4,7 +4,8 @@
 	"description": "A barebones node that interacts with the Lightning Network through handshakes and pong messages.",
 	"main": "index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"tsc": "./node_modules/typescript/bin/tsc --build tsconfig.json"
 	},
 	"keywords": [
 		"lightning",
@@ -29,7 +30,7 @@
 		"argparse": "^1.0.10",
 		"bigi": "^1.4.2",
 		"bolt02": "^0.1.2",
-		"bolt08": "^0.2.4",
+		"bolt08": "^0.2.6",
 		"ecurve": "^1.0.6"
 	}
 }

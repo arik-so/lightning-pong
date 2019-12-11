@@ -51,6 +51,19 @@ export default class TCP {
 		});
 	}
 
+	public send(message: LightningMessage) {
+		if (!this.transmissionHandler) {
+			throw new Error('handshake not complete yet');
+		}
+
+		const messageBuffer = message.toBuffer();
+		const ciphertext = this.transmissionHandler.send(messageBuffer);
+
+		console.log('Sending message of type:', message.getTypeName(), `(${message.getType()})`);
+		console.log(messageBuffer.toString('hex'), '\n');
+		this.socket.write(ciphertext);
+	}
+
 	private processIncomingData(data: Buffer) {
 		// there is some unprocessed data that we will prepend to the newly received data for processing
 		const inputData = Buffer.concat([this.pendingData, data]);
@@ -113,18 +126,21 @@ export default class TCP {
 		}
 	}
 
-	static startServer(port: number) {
-		console.log('Listening on port:', port);
+	static async startServer(port: number): Promise<TCP> {
+		return new Promise<TCP>((resolve, reject) => {
+			console.log('Listening on port:', port);
 
-		const privateKey = crypto.randomBytes(32);
-		const publicKey = secp256k1.G.multiply(Bigi.fromBuffer(privateKey)).getEncoded(true);
-		console.log('Public key:', publicKey.toString('hex'));
+			const privateKey = crypto.randomBytes(32);
+			const publicKey = secp256k1.G.multiply(Bigi.fromBuffer(privateKey)).getEncoded(true);
+			console.log('Public key:', publicKey.toString('hex'));
 
-		const server = net.createServer(function (client) {
-			const tcp = new TCP(client, Role.RECEIVER, privateKey);
+			const server = net.createServer(function (client) {
+				const tcp = new TCP(client, Role.RECEIVER, privateKey);
+				resolve(tcp);
+			});
+
+			server.listen(port);
 		});
-
-		server.listen(port);
 	}
 
 	static startClient(urlString: string): TCP {

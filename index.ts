@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
 import {ArgumentParser} from 'argparse';
+import * as inquirer from 'inquirer';
 import TCP from './src/tcp';
+import {PingMessage} from 'bolt02/src/messages/ping';
+import * as crypto from 'crypto';
 
 const parser = new ArgumentParser({
 	addHelp: true,
@@ -36,8 +39,45 @@ serverParser.addArgument(['-p', '--port'], {
 
 const args = parser.parseArgs();
 
-if (args.mode === 'listen') {
-	TCP.startServer(args.port);
-} else if (args.mode === 'connect') {
-	TCP.startClient(args.url);
-}
+(async () => {
+	let tcp: TCP;
+	if (args.mode === 'listen') {
+		tcp = await TCP.startServer(args.port);
+	} else if (args.mode === 'connect') {
+		tcp = TCP.startClient(args.url);
+	}
+
+	// gotta wait for a bit
+	await new Promise(resolve => setTimeout(resolve, 1000));
+
+	while (true) {
+
+		console.log('\n');
+		const input = await inquirer.prompt([{
+			type: 'rawlist',
+			name: 'action',
+			message: 'What would you like to do?',
+			choices: [
+				{name: 'Ping', value: 'ping'},
+				{name: 'Open Channel', value: 'open-channel'},
+				{name: 'Query Graph', value: 'query-graph'}
+			]
+		}]);
+		console.log('\n');
+
+		if (input.action === 'ping') {
+			const minLength = 5;
+			const maxLength = 30;
+			const requestLength = crypto.randomBytes(1).readUInt8(0) % (maxLength - minLength + 1) + minLength;
+			const responseLength = crypto.randomBytes(1).readUInt8(0) % (maxLength - minLength + 1) + minLength;
+			const pingMessage = new PingMessage({
+				ignored: Buffer.alloc(requestLength, 0),
+				num_pong_bytes: responseLength
+			});
+			tcp.send(pingMessage);
+		}
+
+		await new Promise(resolve => setTimeout(resolve, 250));
+
+	}
+})();

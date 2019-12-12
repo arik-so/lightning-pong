@@ -24,15 +24,18 @@
 		"@types/debug": "^4.1.5",
 		"@types/ecurve": "^1.0.0",
 		"@types/inquirer": "^6.5.0",
-		"@types/node": "^12.12.11",
-		"typescript": "^3.7.2"
+		"@types/node": "^12.12.17",
+		"@types/request-promise-native": "^1.0.17",
+		"typescript": "^3.7.3"
 	},
 	"dependencies": {
 		"argparse": "^1.0.10",
 		"bigi": "^1.4.2",
-		"bolt02": "^0.1.2",
+		"bolt02": "^0.1.8",
 		"bolt08": "^0.2.6",
 		"ecurve": "^1.0.6",
-		"inquirer": "^7.0.0"
+		"inquirer": "^7.0.0",
+		"request": "^2.88.0",
+		"request-promise-native": "^1.0.8"
 	}
 }

@@ -8,6 +8,7 @@ import {Socket} from 'net';
 import {Role, TransmissionHandler} from 'bolt08';
 import Handshake from 'bolt08/src/handshake';
 import {LightningMessage, Message} from 'bolt02';
+import {QueryShortChannelIdsMessage} from 'bolt02/src/messages/query_short_channel_ids';
 
 const debug = debugModule('lightning-pong:tcp');
 const secp256k1 = ecurve.getCurveByName('secp256k1');
@@ -24,6 +25,8 @@ export default class TCP {
 	private role: Role;
 	private handshakeHandler: Handshake;
 	private transmissionHandler: TransmissionHandler;
+
+	private channelGraph: object;
 
 	constructor(socket: Socket, role: Role, privateKey?: Buffer) {
 		this.privateKey = privateKey || crypto.randomBytes(32);
@@ -69,8 +72,8 @@ export default class TCP {
 		const inputData = Buffer.concat([this.pendingData, data]);
 		this.pendingData = TCP.ZERO_BUFFER;
 
-		console.log('Processing:');
-		console.log(inputData.toString('hex'), '\n');
+		// console.log('Processing:');
+		// console.log(inputData.toString('hex'), '\n');
 
 		if (this.transmissionHandler instanceof TransmissionHandler) {
 			debug('Decrypting');
@@ -84,11 +87,11 @@ export default class TCP {
 			}
 
 			console.log('Decrypted:');
-			console.log(decryptedResponse.toString('hex'), '\n');
+			console.log(decryptedResponse.toString('hex'));
 
 			// parse the lightning message
 			const lightningMessage = LightningMessage.parse(decryptedResponse);
-			console.log('Decoded Lightning message of type:', lightningMessage.getTypeName(), `(${lightningMessage.getType()})`);
+			console.log('Decoded Lightning message of type:', lightningMessage.getTypeName(), `(${lightningMessage.getType()})\n`);
 
 			if (lightningMessage instanceof Message.InitMessage) {
 				const encryptedResponse = this.transmissionHandler.send(decryptedResponse);
@@ -104,6 +107,51 @@ export default class TCP {
 				console.log('Sending pong message:', pongMessage.toBuffer().toString('hex'));
 				const encryptedResponse = this.transmissionHandler.send(pongMessage.toBuffer());
 				this.socket.write(encryptedResponse);
+			}
+
+			if (lightningMessage instanceof Message.ReplyChannelRangeMessage) {
+				const values = lightningMessage['values'];
+				const channelIds = lightningMessage.shortChannelIds.map(id => id.toString('hex'));
+
+				// we need to query the channel stuff
+				const queryShortIdsMessage = new QueryShortChannelIdsMessage({
+					chain_hash: values.chain_hash,
+					encoded_short_ids: values.encoded_short_ids,
+					query_short_channel_ids_tlvs: []
+				});
+
+				console.log('Received channel ID count:', channelIds.length);
+				console.log('Channel IDs:\n', JSON.stringify(channelIds, null, 4));
+
+				// start building channel graph
+				this.channelGraph = {};
+
+				this.send(queryShortIdsMessage);
+			}
+
+			if (lightningMessage instanceof Message.ChannelAnnouncementMessage) {
+
+				if (this.channelGraph) {
+					const values = lightningMessage['values'];
+					const node1 = values.node_id_1.getEncoded(true).toString('hex');
+					const node2 = values.node_id_2.getEncoded(true).toString('hex');
+					const nodes = [node1, node2].sort();
+					const channelId = values.short_channel_id.toString('hex');
+					this.channelGraph[nodes[0]] = this.channelGraph[nodes[0]] || {};
+					this.channelGraph[nodes[0]][nodes[1]] = this.channelGraph[nodes[0]][nodes[1]] || [];
+					this.channelGraph[nodes[0]][nodes[1]].push(channelId);
+				}
+
+			}
+
+			if (lightningMessage instanceof Message.ReplyShortChannelIdsEndMessage) {
+				console.log('Complete:', lightningMessage['values'].complete);
+				console.log('Graph:\n', JSON.stringify(this.channelGraph, null, 4));
+				this.channelGraph = null;
+			}
+
+			if (decryptionResult.unreadBuffer.length > 0) {
+				this.processIncomingData(TCP.ZERO_BUFFER);
 			}
 
 		} else {

@@ -5,6 +5,8 @@ import * as inquirer from 'inquirer';
 import TCP from './src/tcp';
 import {PingMessage} from 'bolt02/src/messages/ping';
 import * as crypto from 'crypto';
+import * as rp from 'request-promise-native';
+import {QueryChannelRangeMessage} from 'bolt02/src/messages/query_channel_range';
 
 const parser = new ArgumentParser({
 	addHelp: true,
@@ -75,6 +77,22 @@ const args = parser.parseArgs();
 				num_pong_bytes: responseLength
 			});
 			tcp.send(pingMessage);
+		}
+
+		const TESTNET_GENESIS_HASH = '000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943';
+		// const LOCAL_REGTEST_GENESIS_HASH = '06226e46111a0b59caaf126043eb5bbf28c34f3a5e332a1fc7b2b73cf188910f';
+
+		if (input.action === 'query-graph') {
+			const chainHash = Buffer.from(TESTNET_GENESIS_HASH, 'hex').reverse();
+			const chainStatus = await rp({uri: 'https://test.bitgo.com/api/v2/tbtc/public/block/latest', json: true});
+			const latestBlock = chainStatus.height;
+			const queryMessage = new QueryChannelRangeMessage({
+				first_blocknum: latestBlock - 50,
+				number_of_blocks: 100,
+				chain_hash: chainHash,
+				query_channel_range_tlvs: []
+			});
+			tcp.send(queryMessage);
 		}
 
 		await new Promise(resolve => setTimeout(resolve, 250));
